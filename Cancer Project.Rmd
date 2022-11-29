@@ -1,0 +1,29 @@
+---
+title: "Cancer Data"
+author: "Parth Pandit"
+date: "2022-11-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(class)
+library(caret)
+library(gmodels)
+```
+
+
+## Cleaning the data
+```{r}
+cancer = read.csv("wisc.csv")
+cancer$id = NULL
+cancer$diagnosis = as.factor(cancer$diagnosis)
+str(cancer)
+summary(cancer)
+```
+
+## 
