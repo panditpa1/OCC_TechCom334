@@ -74,6 +74,12 @@ str(train)
 
 
 ```{r}
+train$diagnosisB = NULL
+test$diagnosisB = NULL
+```
+
+
+```{r}
 logmodel = glm(diagnosisM ~., data = train, family = "binomial")
 
 log_cancer <- predict(logmodel, test, type= "response")

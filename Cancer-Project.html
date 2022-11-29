@@ -478,12 +478,14 @@ test_labels &lt;- cancer_norm[test_set, &quot;diagnosisM&quot;]</code></pre>
 ##  $ compactness_worst: num  0.1673 0.0606 0.2615 0.217 0.2333 ...
 ##  $ concavity_worst  : num  0.2273 0.0414 0.2762 0.1696 0.3849 ...
 ##  $ symmetry_worst   : num  0.195 0.121 0.267 0.143 0.203 ...</code></pre>
-<pre class="r"><code>logmodel = glm(diagnosisM ~., data = train, family = &quot;binomial&quot;)</code></pre>
-<pre><code>## Warning: glm.fit: algorithm did not converge</code></pre>
-<pre class="r"><code>log_cancer &lt;- predict(logmodel, test, type= &quot;response&quot;)
+<pre class="r"><code>train$diagnosisB = NULL
+test$diagnosisB = NULL</code></pre>
+<pre class="r"><code>logmodel = glm(diagnosisM ~., data = train, family = &quot;binomial&quot;)
+
+log_cancer &lt;- predict(logmodel, test, type= &quot;response&quot;)
 summary(log_cancer)</code></pre>
-<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-##  0.0000  0.0000  0.0000  0.3649  1.0000  1.0000</code></pre>
+<pre><code>##      Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+## 0.0000101 0.0270443 0.1455225 0.3640741 0.8096299 0.9999996</code></pre>
 <pre class="r"><code>log_cancer_diagnosis &lt;- ifelse(log_cancer &lt; 0.2,0,1)
 CrossTable(x=test$diagnosisM, y=log_cancer_diagnosis, prop.chisq=FALSE)</code></pre>
 <pre><code>## 
@@ -503,18 +505,18 @@ CrossTable(x=test$diagnosisM, y=log_cancer_diagnosis, prop.chisq=FALSE)</code></
 ##                 | log_cancer_diagnosis 
 ## test$diagnosisM |         0 |         1 | Row Total | 
 ## ----------------|-----------|-----------|-----------|
-##               0 |       181 |         0 |       181 | 
-##                 |     1.000 |     0.000 |     0.635 | 
-##                 |     1.000 |     0.000 |           | 
-##                 |     0.635 |     0.000 |           | 
+##               0 |       143 |        38 |       181 | 
+##                 |     0.790 |     0.210 |     0.635 | 
+##                 |     0.947 |     0.284 |           | 
+##                 |     0.502 |     0.133 |           | 
 ## ----------------|-----------|-----------|-----------|
-##               1 |         0 |       104 |       104 | 
-##                 |     0.000 |     1.000 |     0.365 | 
-##                 |     0.000 |     1.000 |           | 
-##                 |     0.000 |     0.365 |           | 
+##               1 |         8 |        96 |       104 | 
+##                 |     0.077 |     0.923 |     0.365 | 
+##                 |     0.053 |     0.716 |           | 
+##                 |     0.028 |     0.337 |           | 
 ## ----------------|-----------|-----------|-----------|
-##    Column Total |       181 |       104 |       285 | 
-##                 |     0.635 |     0.365 |           | 
+##    Column Total |       151 |       134 |       285 | 
+##                 |     0.530 |     0.470 |           | 
 ## ----------------|-----------|-----------|-----------|
 ## 
 ## </code></pre>
@@ -523,28 +525,28 @@ CrossTable(x=test$diagnosisM, y=log_cancer_diagnosis, prop.chisq=FALSE)</code></
 ## 
 ##           Reference
 ## Prediction   0   1
-##          0 181   0
-##          1   0 104
-##                                      
-##                Accuracy : 1          
-##                  95% CI : (0.9871, 1)
-##     No Information Rate : 0.6351     
-##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16  
-##                                      
-##                   Kappa : 1          
-##                                      
-##  Mcnemar&#39;s Test P-Value : NA         
-##                                      
-##             Sensitivity : 1.0000     
-##             Specificity : 1.0000     
-##          Pos Pred Value : 1.0000     
-##          Neg Pred Value : 1.0000     
-##              Prevalence : 0.3649     
-##          Detection Rate : 0.3649     
-##    Detection Prevalence : 0.3649     
-##       Balanced Accuracy : 1.0000     
-##                                      
-##        &#39;Positive&#39; Class : 1          
+##          0 143   8
+##          1  38  96
+##                                           
+##                Accuracy : 0.8386          
+##                  95% CI : (0.7906, 0.8793)
+##     No Information Rate : 0.6351          
+##     P-Value [Acc &gt; NIR] : 2.662e-14       
+##                                           
+##                   Kappa : 0.6719          
+##                                           
+##  Mcnemar&#39;s Test P-Value : 1.904e-05       
+##                                           
+##             Sensitivity : 0.9231          
+##             Specificity : 0.7901          
+##          Pos Pred Value : 0.7164          
+##          Neg Pred Value : 0.9470          
+##              Prevalence : 0.3649          
+##          Detection Rate : 0.3368          
+##    Detection Prevalence : 0.4702          
+##       Balanced Accuracy : 0.8566          
+##                                           
+##        &#39;Positive&#39; Class : 1               
 ## </code></pre>
 <pre class="r"><code>summary(logmodel)</code></pre>
 <pre><code>## 
@@ -552,32 +554,33 @@ CrossTable(x=test$diagnosisM, y=log_cancer_diagnosis, prop.chisq=FALSE)</code></
 ## glm(formula = diagnosisM ~ ., family = &quot;binomial&quot;, data = train)
 ## 
 ## Deviance Residuals: 
-##        Min          1Q      Median          3Q         Max  
-## -2.409e-06  -2.409e-06  -2.409e-06   2.409e-06   2.409e-06  
+##     Min       1Q   Median       3Q      Max  
+## -2.8916  -0.3957  -0.1310   0.3066   2.4943  
 ## 
 ## Coefficients:
-##                     Estimate Std. Error z value Pr(&gt;|z|)
-## (Intercept)        2.657e+01  1.380e+05   0.000    1.000
-## diagnosisB        -5.313e+01  6.508e+04  -0.001    0.999
-## texture_mean       4.821e-10  4.797e+05   0.000    1.000
-## smoothness_mean    1.900e-09  3.820e+05   0.000    1.000
-## symmetry_mean     -2.064e-09  2.860e+05   0.000    1.000
-## texture_se         4.525e-10  3.691e+05   0.000    1.000
-## smoothness_se      2.233e-09  3.208e+05   0.000    1.000
-## symmetry_se       -1.426e-09  3.822e+05   0.000    1.000
-## texture_worst     -7.451e-10  5.446e+05   0.000    1.000
-## smoothness_worst  -3.020e-09  3.719e+05   0.000    1.000
-## compactness_worst  4.235e-10  3.742e+05   0.000    1.000
-## concavity_worst    5.241e-11  3.610e+05   0.000    1.000
-## symmetry_worst     6.017e-09  4.449e+05   0.000    1.000
+##                    Estimate Std. Error z value Pr(&gt;|z|)    
+## (Intercept)        -9.90753    1.44356  -6.863 6.73e-12 ***
+## texture_mean        7.04189    4.72264   1.491  0.13594    
+## smoothness_mean     5.56055    3.90862   1.423  0.15484    
+## symmetry_mean       0.06872    2.55790   0.027  0.97857    
+## texture_se         -5.93802    4.11845  -1.442  0.14936    
+## smoothness_se       0.41427    2.52098   0.164  0.86947    
+## symmetry_se        -0.40218    4.96169  -0.081  0.93540    
+## texture_worst       4.89590    5.49286   0.891  0.37276    
+## smoothness_worst    0.46576    3.48757   0.134  0.89376    
+## compactness_worst -12.38103    4.05261  -3.055  0.00225 ** 
+## concavity_worst    20.82035    3.81427   5.459 4.80e-08 ***
+## symmetry_worst      6.92960    4.72576   1.466  0.14255    
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
 ## 
 ## (Dispersion parameter for binomial family taken to be 1)
 ## 
-##     Null deviance: 3.7727e+02  on 283  degrees of freedom
-## Residual deviance: 1.6476e-09  on 271  degrees of freedom
-## AIC: 26
+##     Null deviance: 377.27  on 283  degrees of freedom
+## Residual deviance: 163.64  on 272  degrees of freedom
+## AIC: 187.64
 ## 
-## Number of Fisher Scoring iterations: 25</code></pre>
+## Number of Fisher Scoring iterations: 6</code></pre>
 </div>
 
 
