@@ -367,7 +367,9 @@ display: none;
 library(caret)</code></pre>
 <pre><code>## Loading required package: ggplot2</code></pre>
 <pre><code>## Loading required package: lattice</code></pre>
-<pre class="r"><code>library(gmodels)</code></pre>
+<pre class="r"><code>library(gmodels)
+
+#Do some cross validation for the first level models </code></pre>
 <div id="cleaning-the-data" class="section level2">
 <h2>Cleaning the data</h2>
 <pre class="r"><code>cancer = read.csv(&quot;wisc.csv&quot;)
@@ -443,6 +445,139 @@ str(cancer_norm)</code></pre>
 ##  $ compactness_worst: num  0.1673 0.1932 0.3797 0.0606 0.1319 ...
 ##  $ concavity_worst  : num  0.2273 0.2562 0.5271 0.0414 0.1296 ...
 ##  $ symmetry_worst   : num  0.195 0.252 0.269 0.121 0.24 ...</code></pre>
+</div>
+<div id="getting-train-and-test-samples" class="section level2">
+<h2>Getting Train and Test Samples</h2>
+<pre class="r"><code># Selects 10000 random rows for test data
+test_set &lt;- sample(1:nrow(cancer_norm), 285) 
+# Depending on R-version and computer, different rows may be selected. 
+# If that happens, results are different. 
+
+# Create a train set and test set
+#First the predictors 
+train &lt;- cancer_norm[-test_set,]
+test &lt;- cancer_norm[test_set,]
+
+train_labels &lt;- cancer_norm[-test_set, &quot;diagnosisM&quot;]
+test_labels &lt;- cancer_norm[test_set, &quot;diagnosisM&quot;]</code></pre>
+</div>
+<div id="the-log-model" class="section level2">
+<h2>THE LOG MODEL</h2>
+<pre class="r"><code>str(train)</code></pre>
+<pre><code>## &#39;data.frame&#39;:    284 obs. of  13 variables:
+##  $ diagnosisB       : num  0 1 0 1 0 0 1 0 1 0 ...
+##  $ diagnosisM       : num  1 0 1 0 1 1 0 1 0 1 ...
+##  $ texture_mean     : num  0.441 0.396 0.466 0.268 0.492 ...
+##  $ smoothness_mean  : num  0.355 0.315 0.452 0.399 0.49 ...
+##  $ symmetry_mean    : num  0.332 0.32 0.464 0.282 0.372 ...
+##  $ texture_se       : num  0.106 0.307 0.319 0.27 0.125 ...
+##  $ smoothness_se    : num  0.2777 0.0972 0.3024 0.2647 0.1557 ...
+##  $ symmetry_se      : num  0.2368 0.3637 0.1967 0.0751 0.0972 ...
+##  $ texture_worst    : num  0.368 0.306 0.493 0.386 0.499 ...
+##  $ smoothness_worst : num  0.36 0.15 0.496 0.473 0.53 ...
+##  $ compactness_worst: num  0.1673 0.0606 0.2615 0.217 0.2333 ...
+##  $ concavity_worst  : num  0.2273 0.0414 0.2762 0.1696 0.3849 ...
+##  $ symmetry_worst   : num  0.195 0.121 0.267 0.143 0.203 ...</code></pre>
+<pre class="r"><code>logmodel = glm(diagnosisM ~., data = train, family = &quot;binomial&quot;)</code></pre>
+<pre><code>## Warning: glm.fit: algorithm did not converge</code></pre>
+<pre class="r"><code>log_cancer &lt;- predict(logmodel, test, type= &quot;response&quot;)
+summary(log_cancer)</code></pre>
+<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##  0.0000  0.0000  0.0000  0.3649  1.0000  1.0000</code></pre>
+<pre class="r"><code>log_cancer_diagnosis &lt;- ifelse(log_cancer &lt; 0.2,0,1)
+CrossTable(x=test$diagnosisM, y=log_cancer_diagnosis, prop.chisq=FALSE)</code></pre>
+<pre><code>## 
+##  
+##    Cell Contents
+## |-------------------------|
+## |                       N |
+## |           N / Row Total |
+## |           N / Col Total |
+## |         N / Table Total |
+## |-------------------------|
+## 
+##  
+## Total Observations in Table:  285 
+## 
+##  
+##                 | log_cancer_diagnosis 
+## test$diagnosisM |         0 |         1 | Row Total | 
+## ----------------|-----------|-----------|-----------|
+##               0 |       181 |         0 |       181 | 
+##                 |     1.000 |     0.000 |     0.635 | 
+##                 |     1.000 |     0.000 |           | 
+##                 |     0.635 |     0.000 |           | 
+## ----------------|-----------|-----------|-----------|
+##               1 |         0 |       104 |       104 | 
+##                 |     0.000 |     1.000 |     0.365 | 
+##                 |     0.000 |     1.000 |           | 
+##                 |     0.000 |     0.365 |           | 
+## ----------------|-----------|-----------|-----------|
+##    Column Total |       181 |       104 |       285 | 
+##                 |     0.635 |     0.365 |           | 
+## ----------------|-----------|-----------|-----------|
+## 
+## </code></pre>
+<pre class="r"><code>confusionMatrix(as.factor(log_cancer_diagnosis), as.factor(test$diagnosisM), positive = &quot;1&quot;)</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction   0   1
+##          0 181   0
+##          1   0 104
+##                                      
+##                Accuracy : 1          
+##                  95% CI : (0.9871, 1)
+##     No Information Rate : 0.6351     
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16  
+##                                      
+##                   Kappa : 1          
+##                                      
+##  Mcnemar&#39;s Test P-Value : NA         
+##                                      
+##             Sensitivity : 1.0000     
+##             Specificity : 1.0000     
+##          Pos Pred Value : 1.0000     
+##          Neg Pred Value : 1.0000     
+##              Prevalence : 0.3649     
+##          Detection Rate : 0.3649     
+##    Detection Prevalence : 0.3649     
+##       Balanced Accuracy : 1.0000     
+##                                      
+##        &#39;Positive&#39; Class : 1          
+## </code></pre>
+<pre class="r"><code>summary(logmodel)</code></pre>
+<pre><code>## 
+## Call:
+## glm(formula = diagnosisM ~ ., family = &quot;binomial&quot;, data = train)
+## 
+## Deviance Residuals: 
+##        Min          1Q      Median          3Q         Max  
+## -2.409e-06  -2.409e-06  -2.409e-06   2.409e-06   2.409e-06  
+## 
+## Coefficients:
+##                     Estimate Std. Error z value Pr(&gt;|z|)
+## (Intercept)        2.657e+01  1.380e+05   0.000    1.000
+## diagnosisB        -5.313e+01  6.508e+04  -0.001    0.999
+## texture_mean       4.821e-10  4.797e+05   0.000    1.000
+## smoothness_mean    1.900e-09  3.820e+05   0.000    1.000
+## symmetry_mean     -2.064e-09  2.860e+05   0.000    1.000
+## texture_se         4.525e-10  3.691e+05   0.000    1.000
+## smoothness_se      2.233e-09  3.208e+05   0.000    1.000
+## symmetry_se       -1.426e-09  3.822e+05   0.000    1.000
+## texture_worst     -7.451e-10  5.446e+05   0.000    1.000
+## smoothness_worst  -3.020e-09  3.719e+05   0.000    1.000
+## compactness_worst  4.235e-10  3.742e+05   0.000    1.000
+## concavity_worst    5.241e-11  3.610e+05   0.000    1.000
+## symmetry_worst     6.017e-09  4.449e+05   0.000    1.000
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 3.7727e+02  on 283  degrees of freedom
+## Residual deviance: 1.6476e-09  on 271  degrees of freedom
+## AIC: 26
+## 
+## Number of Fisher Scoring iterations: 25</code></pre>
 </div>
 
 
