@@ -14,7 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(class)
 library(caret)
 library(gmodels)
-
+library(ROCR)
 #Do some cross validation for the first level models 
 ```
 
@@ -80,15 +80,16 @@ test$diagnosisB = NULL
 
 
 ```{r}
-logmodel = glm(diagnosisM ~., data = train, family = "binomial")
+set.seed(0)
 
-log_cancer <- predict(logmodel, test, type= "response")
-summary(log_cancer)
-log_cancer_diagnosis <- ifelse(log_cancer < 0.2,0,1)
-CrossTable(x=test$diagnosisM, y=log_cancer_diagnosis, prop.chisq=FALSE)
-confusionMatrix(as.factor(log_cancer_diagnosis), as.factor(test$diagnosisM), positive = "1")
 
-summary(logmodel)
+
+ctrl = trainControl(method = "cv",
+                    number = 4)
+
+logmodel = train(diagnosis ~., method = "multinom",
+                 data = cancer,
+                 trControl = ctrl)
 ```
 
 
