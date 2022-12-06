@@ -90,6 +90,34 @@ ctrl = trainControl(method = "cv",
 logmodel = train(diagnosis ~., method = "multinom",
                  data = cancer,
                  trControl = ctrl)
+
+summary(logmodel)
+```
+
+#Decision Tree
+```{r}
+
+ctrl <- trainControl(method = "cv", number = 10,
+                     selectionFunction = "oneSE")
+
+# use expand.grid() to create grid of tuning parameters
+grid <- expand.grid(.model = "tree",
+                    .trials = c(1, 5, 10, 15, 20, 25, 30, 35),
+                    .winnow = "FALSE")
+
+# look at the result of expand.grid()
+grid
+
+# customize train() with the control list and grid of parameters 
+set.seed(300)
+dt <- train(diagnosis ~ ., data = cancer, method = "C5.0",
+           metric = "Kappa",
+           trControl = ctrl,
+           tuneGrid = grid)
+dt
+
+
+
 ```
 
 
