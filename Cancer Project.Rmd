@@ -120,4 +120,27 @@ dt
 
 ```
 
+## Logistic Regression Model
+```{r}
+library(caret)
 
+ctrl <- trainControl(method = "cv", 
+                     number = 4)
+mod <- train(diagnosis ~ ., 
+             method = "multinom", 
+             data = cancer, 
+             trControl = ctrl, 
+             trace=FALSE)
+
+mod
+head(predict(mod, type = "prob"))
+
+get_best_result = function(caret_fit) {
+  best = which(rownames(caret_fit$results) == rownames(caret_fit$bestTune))
+  best_result = caret_fit$results[best, ]
+  rownames(best_result) = NULL
+  best_result
+}
+
+get_best_result(mod)
+```
