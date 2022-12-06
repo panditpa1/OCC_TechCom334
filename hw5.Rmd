@@ -1,0 +1,138 @@
+---
+title: "hw5"
+author: "Sreya Manchiraju"
+date: '2022-11-29'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Data Loading and Cleaning
+```{r}
+cancer <- read.csv("wisc.csv", stringsAsFactors = TRUE)
+cancer$id <- NULL
+cancer$diagnosis = as.factor(cancer$diagnosis)
+str(cancer)
+```
+
+## Data Analysis
+```{r}
+cancermm <- as.data.frame(model.matrix(~.-1,cancer))
+
+set.seed(123)
+cancer_random <- cancermm[sample(nrow(cancermm)),]
+
+# normalization function 
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+
+cancer_norm <- as.data.frame(lapply(cancer_random, normalize))
+str(cancer_norm)
+cancer$diagnosis <- factor(cancer$diagnosis, levels = c("B", "M"), 
+                         labels = c("Benign", "Malignant"))
+```
+
+## Decision Tree, finds the best model
+```{r}
+library(caret)
+ctrl <- trainControl(method = "cv", number = 10,
+                     selectionFunction = "oneSE")
+# use expand.grid() to create grid of tuning parameters
+grid <- expand.grid(.model = "tree",
+                    .trials = c(1, 5, 10, 15, 20, 25, 30, 35),
+                    .winnow = "FALSE")
+# look at the result of expand.grid()
+grid
+# customize train() with the control list and grid of parameters 
+set.seed(300)
+dt <- train(diagnosis ~ ., data = cancer, method = "C5.0",
+           metric = "Kappa",
+           trControl = ctrl,
+           tuneGrid = grid)
+dt
+get_best_result = function(caret_fit) {
+  best = which(rownames(caret_fit$results) == rownames(caret_fit$bestTune))
+  best_result = caret_fit$results[best, ]
+  rownames(best_result) = NULL
+  best_result
+}
+get_best_result(dt)
+```
+
+## Logistic Regression Model, finds the best model
+```{r}
+ctrl <- trainControl(method = "cv", 
+                     number = 4)
+log_mod <- train(diagnosis ~ ., 
+             method = "multinom", 
+             data = cancer, 
+             trControl = ctrl, 
+             trace=FALSE)
+
+log_mod
+temp <- predict(log_mod, newdata=cancer_test)
+str(temp)
+get_best_result(log_mod)
+```
+
+## KNN Model, finds the best model
+```{r}
+library(caret)
+grid <- expand.grid(k = c(1,5,7,9,10))
+
+# oneSE = give me least complication model which gets similar accuracy 
+ctrl <- trainControl(method = "cv", 
+                     number=4)
+knn_mod <- train(diagnosis ~ ., 
+             method = "knn", 
+             metric = "kappa", 
+             data = cancer, 
+             trControl = ctrl, 
+             tuneGrid = grid)
+
+knn_mod
+get_best_result(knn_mod)
+```
+```{r}
+cancer_norm$diagnosisB = NULL
+```
+
+
+## ANN Model, finds the besty model
+```{r}
+ctrl = trainControl(method="cv",
+                    number=4)
+
+ANN_mod <- train(diagnosis ~ ., 
+           data = cancer, 
+           method = "nnet", 
+           trControl = ctrl)
+ANN_mod
+get_best_result(ANN_mod)
+```
+
+## SVM Model, finds the best model
+```{r}
+ctrl <- trainControl(method = "cv", 
+                     number = 4)
+svm_mod <- train(diagnosis ~ ., 
+             method = "svmLinear", 
+             data = cancer, 
+             trControl = ctrl)
+svm_mod
+get_best_result(svm_mod)
+```
+
+## Combined Model 
+```{r}
+
+```
+
+## 2 sets of test and train bc too small a dataset 
+## number=4/repeat=4 cross validation on everything / in other algos (use train function)
+## don't have to use train for optimization 
+
