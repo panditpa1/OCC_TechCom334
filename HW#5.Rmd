@@ -54,10 +54,10 @@ test_set <- sample(1:nrow(cancer_norm), 569)
 
 # Create a train set and test set
 #First the predictors 
-cancer_train <- cancer_norm[-test_set,]
+cancer_train <- cancer_norm[test_set,]
 cancer_test <- cancer_norm[test_set,]
 
-cancer_train_labels <- cancer_norm[-test_set, "diagnosisM"]
+cancer_train_labels <- cancer_norm[test_set, "diagnosisM"]
 cancer_test_labels <- cancer_norm[test_set, "diagnosisM"]
 ```
 
@@ -106,27 +106,45 @@ cancer_classifier
 cancer2_predictions <- predict(cancer_classifier, cancer_test)
 head(cancer2_predictions)
 
-table(cancer2_predictions, canncer_test$diagnosisM)
+table(cancer2_predictions, cancer_test$diagnosisM)
 
 # look at agreement vs non-agreement
 agreement <- cancer2_predictions == cancer_test$diagnosisM
 table(agreement)
 prop.table(table(agreement))
 ```
+```{r}
+# predictions on testing dataset
+svm_predictions <- predict(cancer_classifier, cancer_test)
+head(svm_predictions)
+
+table(svm_predictions, cancer_test$diagnosisM)
+
+# look at agreement vs non-agreement
+agreement <- svm_predictions == cancer_test$diagnosisM
+table(agreement)
+prop.table(table(agreement))
+
+CrossTable(x = cancer_test$diagnosisM, y = svm_predictions, prop.chisq=FALSE)
+confusionMatrix(as.factor(svm_predictions), as.factor(cancer_test$diagnosisM), positive = "1")
+```
+
 ## KNN
 ```{r}
-KNN_train <- cancer_norm[-test_set,]
+KNN_train <- cancer_norm[test_set,]
 KNN_test <- cancer_norm[test_set,]
 
-KNN_train_labels <- cancer_norm[-test_set, "diagnosisM"]
+KNN_train_labels <- cancer_norm[test_set, "diagnosisM"]
 KNN_test_labels <- cancer_norm[test_set, "diagnosisM"]
 
 KNN_test$diagnosisM = NULL
 KNN_train$diagnosisM = NULL
 
 ##Test
-KNN_pred <- KNN_test[, match("diagnosisM", names(cancer_norm))]
+KNN_pred <- ifelse(KNN_test[, match("diagnosisM", names(cancer_norm))]< 0.5, 0,1)
+
 KNN_test_pred <- knn(train = KNN_train, test = KNN_test, cl = cancer_train_labels, k = 3)
+
 CrossTable(x = KNN_pred, y =KNN_test_pred,
            prop.chisq=FALSE)
 confusionMatrix(as.factor(KNN_test_pred),as.factor(cancer_test_labels), positive = "1")
