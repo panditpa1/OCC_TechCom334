@@ -14,6 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(class)
 library(caret)
 library(gmodels)
+library(kernlab)
 ```
 
 ## Data Loading and Cleaning
@@ -38,9 +39,10 @@ normalize <- function(x) {
 }
 
 cancer_norm <- as.data.frame(lapply(cancer_random, normalize))
+cancer_norm$diagnosisBenign <- NULL
+
+names(cancer_norm) <- c("diagnosisM", "texture_mean", "smoothness_mean", "symmetry_mean", "texture_se", "smoothness_se", "symmetry_se", "texture_worst", "smoothness_worst", "compactness_worst", "concavity_worst", "symmetry_worst")
 str(cancer_norm)
-cancer$diagnosis <- factor(cancer$diagnosis, levels = c("B", "M"), 
-                         labels = c("Benign", "Malignant"))
 ```
 
 ## Getting Train and Test Samples
@@ -55,6 +57,77 @@ test_set <- sample(1:nrow(cancer_norm), 569)
 cancer_train <- cancer_norm[-test_set,]
 cancer_test <- cancer_norm[test_set,]
 
-cancer_train_labels <- cancer_norm[-test_set, "diagnosis"]
-cancer_test_labels <- cancer_norm[test_set, "diagnosis"]
+cancer_train_labels <- cancer_norm[-test_set, "diagnosisM"]
+cancer_test_labels <- cancer_norm[test_set, "diagnosisM"]
+```
+
+
+## Regression
+```{r}
+logmodel = glm(diagnosisM ~ texture_mean + smoothness_mean + texture_se + compactness_worst + concavity_worst + symmetry_worst, data = cancer_norm, family = binomial)
+
+summary(logmodel)
+
+log_cancer <- predict(logmodel, cancer_test, type= "response")
+log_cancer_M <- ifelse(log_cancer < 0.5,0,1)
+CrossTable(x=cancer_test$diagnosisM, y=log_cancer_M, prop.chisq=FALSE)
+confusionMatrix(as.factor(log_cancer_M), as.factor(cancer_test$diagnosisM), positive = "1")
+```
+#ANN Model
+```{r}
+library(neuralnet)
+diagnosisM_model <- neuralnet(diagnosisM ~ ., data = cancer_train, hidden = 3)
+
+# evaluate the results as we did before
+model_results <- compute(diagnosisM_model, cancer_test)
+
+ANN_prediction <- predict(diagnosisM_model, cancer_test)
+diagnosisM_pred <- ifelse(ANN_prediction < 0.5, 0, 1)
+
+CrossTable(x = cancer_test$diagnosisM, y = diagnosisM_pred, prop.chisq=FALSE)
+confusionMatrix(as.factor(diagnosisM_pred), as.factor(cancer_test$diagnosisM), positive = "1")
+```
+
+
+## SVM Model
+```{r}
+library(kernlab)
+
+cancer2 = cancer[sample(1:nrow(cancer)), ]
+
+#tele_train2 <- tele2[1:20594, ]
+#tele_test2 <- tele2[20595:41188, ]
+
+cancer_classifier <- ksvm(as.factor(diagnosisM) ~ ., data = cancer_train, kernel = "vanilladot")
+
+cancer_classifier
+
+# predictions on testing dataset
+cancer2_predictions <- predict(cancer_classifier, cancer_test)
+head(cancer2_predictions)
+
+table(cancer2_predictions, canncer_test$diagnosisM)
+
+# look at agreement vs non-agreement
+agreement <- cancer2_predictions == cancer_test$diagnosisM
+table(agreement)
+prop.table(table(agreement))
+```
+## KNN
+```{r}
+KNN_train <- cancer_norm[-test_set,]
+KNN_test <- cancer_norm[test_set,]
+
+KNN_train_labels <- cancer_norm[-test_set, "diagnosisM"]
+KNN_test_labels <- cancer_norm[test_set, "diagnosisM"]
+
+KNN_test$diagnosisM = NULL
+KNN_train$diagnosisM = NULL
+
+##Test
+KNN_pred <- KNN_test[, match("diagnosisM", names(cancer_norm))]
+KNN_test_pred <- knn(train = KNN_train, test = KNN_test, cl = cancer_train_labels, k = 3)
+CrossTable(x = KNN_pred, y =KNN_test_pred,
+           prop.chisq=FALSE)
+confusionMatrix(as.factor(KNN_test_pred),as.factor(cancer_test_labels), positive = "1")
 ```
