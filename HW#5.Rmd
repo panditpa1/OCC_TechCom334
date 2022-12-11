@@ -1,0 +1,60 @@
+---
+title: "HW#5"
+author: "Jessica Guo, Sreya Manchiraju, Isabelle Lian, Parth Pandit, Satvik Suneja"
+date: "12/11/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Libraries
+```{r}
+library(class)
+library(caret)
+library(gmodels)
+```
+
+## Data Loading and Cleaning
+```{r}
+cancer <- read.csv("wisc.csv", stringsAsFactors = TRUE)
+cancer$id <- NULL
+cancer$diagnosis = as.factor(cancer$diagnosis)
+str(cancer)
+summary(cancer)
+```
+
+## Data Analysis
+```{r}
+cancermm <- as.data.frame(model.matrix(~.-1,cancer))
+
+set.seed(123)
+cancer_random <- cancermm[sample(nrow(cancermm)),]
+
+# normalization function 
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+
+cancer_norm <- as.data.frame(lapply(cancer_random, normalize))
+str(cancer_norm)
+cancer$diagnosis <- factor(cancer$diagnosis, levels = c("B", "M"), 
+                         labels = c("Benign", "Malignant"))
+```
+
+## Getting Train and Test Samples
+```{r}
+# Split data in half for test data
+test_set <- sample(1:nrow(cancer_norm), 569) 
+# Depending on R-version and computer, different rows may be selected. 
+# If that happens, results are different. 
+
+# Create a train set and test set
+#First the predictors 
+cancer_train <- cancer_norm[-test_set,]
+cancer_test <- cancer_norm[test_set,]
+
+cancer_train_labels <- cancer_norm[-test_set, "diagnosis"]
+cancer_test_labels <- cancer_norm[test_set, "diagnosis"]
+```
