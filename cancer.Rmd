@@ -1,0 +1,167 @@
+---
+title: "HW#5"
+author: "Jessica Guo, Sreya Manchiraju, Isabelle Lian, Parth Pandit, Satvik Suneja"
+date: "12/11/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Libraries
+```{r}
+library(class)
+library(caret)
+library(gmodels)
+library(kernlab)
+```
+
+## Data Loading and Cleaning
+```{r}
+cancer <- read.csv("wisc.csv", stringsAsFactors = TRUE)
+cancer$id <- NULL
+cancer$diagnosis = as.factor(cancer$diagnosis)
+str(cancer)
+summary(cancer)
+```
+
+## Data Analysis
+```{r}
+cancermm <- as.data.frame(model.matrix(~.-1,cancer))
+set.seed(123)
+cancer_random <- cancermm[sample(nrow(cancermm)),]
+# normalization function 
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+cancer_norm <- as.data.frame(lapply(cancer_random, normalize))
+cancer_norm$diagnosisB <- NULL
+names(cancer_norm) <- c("diagnosisM", "texture_mean", "smoothness_mean", "symmetry_mean", "texture_se", "smoothness_se", "symmetry_se", "texture_worst", "smoothness_worst", "compactness_worst", "concavity_worst", "symmetry_worst")
+str(cancer_norm)
+```
+
+## Getting Train and Test Samples
+```{r}
+# Split data in half for test data
+test_set <- sample(1:nrow(cancer_norm), 569) 
+# Depending on R-version and computer, different rows may be selected. 
+# If that happens, results are different. 
+# Create a train set and test set
+#First the predictors 
+cancer_train <- cancer_norm[test_set,]
+cancer_test <- cancer_norm[test_set,]
+cancer_train_labels <- cancer_norm[-test_set, "diagnosisM"]
+cancer_test_labels <- cancer_norm[test_set, "diagnosisM"]
+```
+
+
+## Regression
+```{r}
+logmodel = glm(diagnosisM ~ texture_mean + smoothness_mean + texture_se + compactness_worst + concavity_worst + symmetry_worst, data = cancer_norm, family = binomial)
+summary(logmodel)
+log_cancer <- predict(logmodel, cancer_test, type= "response")
+log_cancer_M <- ifelse(log_cancer < 0.5,0,1)
+CrossTable(x=cancer_test$diagnosisM, y=log_cancer_M, prop.chisq=FALSE)
+confusionMatrix(as.factor(log_cancer_M), as.factor(cancer_test$diagnosisM), positive = "1")
+```
+#ANN Model
+```{r}
+library(neuralnet)
+ANN_model <- neuralnet(diagnosisM ~ ., 
+                       data = cancer_train, hidden = 3)
+
+# evaluate the results as we did before
+#model_results <- compute(diagnosisM_model, cancer_test)
+
+ANN_prediction <- predict(ANN_model, cancer_test)
+ANN_pred <- ifelse(ANN_prediction < 0.5, 0, 1)
+```
+
+```{r}
+length(ANN_pred)
+length(cancer_test$diagnosisM)
+```
+
+```{r}
+CrossTable(x = cancer_test$diagnosisM, y = ANN_pred, prop.chisq=FALSE)
+confusionMatrix(as.factor(ANN_pred), as.factor(cancer_test$diagnosisM), positive = "1")
+```
+
+## SVM Model
+```{r}
+library(kernlab)
+cancer2 = cancer[sample(1:nrow(cancer)), ]
+#tele_train2 <- tele2[1:20594, ]
+#tele_test2 <- tele2[20595:41188, ]
+cancer_classifier <- ksvm(as.factor(diagnosisM) ~ ., data = cancer_train, kernel = "vanilladot")
+cancer_classifier
+# predictions on testing dataset
+cancer2_predictions <- predict(cancer_classifier, cancer_test)
+head(cancer2_predictions)
+table(cancer2_predictions, cancer_test$diagnosisM)
+# look at agreement vs non-agreement
+agreement <- cancer2_predictions == cancer_test$diagnosisM
+table(agreement)
+prop.table(table(agreement))
+```
+```{r}
+# predictions on testing dataset
+svm_predictions <- predict(cancer_classifier, cancer_test)
+head(svm_predictions)
+table(svm_predictions, cancer_test$diagnosisM)
+# look at agreement vs non-agreement
+agreement <- svm_predictions == cancer_test$diagnosisM
+table(agreement)
+prop.table(table(agreement))
+CrossTable(x = cancer_test$diagnosisM, y = svm_predictions, prop.chisq=FALSE)
+confusionMatrix(as.factor(svm_predictions), as.factor(cancer_test$diagnosisM), positive = "1")
+```
+
+## KNN
+```{r}
+KNN_train <- cancer_norm[test_set,]
+KNN_test <- cancer_norm[test_set,]
+
+KNN_train_labels <- cancer_norm[test_set, "diagnosisM"]
+KNN_test_labels <- cancer_norm[test_set, "diagnosisM"]
+
+KNN_test$diagnosisM = NULL
+KNN_train$diagnosisM = NULL
+
+##Test
+KNN_pred <- cancer_test[, match("diagnosisM", names(cancer_norm))]
+KNN_test_pred <- knn(train = KNN_train, test = KNN_test, cl = KNN_train_labels, k = 3)
+CrossTable(x = KNN_pred, y =KNN_test_pred,
+           prop.chisq=FALSE)
+confusionMatrix(as.factor(KNN_test_pred),as.factor(KNN_test_labels), positive = "1")
+```
+
+## Decision Tree
+```{r}
+library(C50)
+
+prop.table(table(cancer_train$diagnosisM))
+prop.table(table(cancer_test$diagnosisM))
+
+cancer_dtmodel <- C5.0(as.factor(diagnosisM) ~ ., data = cancer_train)
+dt_predict <- predict(cancer_dtmodel, cancer_test)
+plot(cancer_dtmodel, subtree = 4)
+# cross tabulation of predicted versus actual classes
+library(gmodels)
+CrossTable(cancer_test$diagnosisM, dt_predict,
+           prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE,
+           dnn = c('actual', 'predicted'))
+confusionMatrix(as.factor(dt_predict), as.factor(cancer_test$diagnosisM), positive = "1")
+
+```
+
+```{r}
+
+combined_prediction <- data.frame(log_tele_yyes, KNN_test_pred, tele_pred, tele2_predictions, dt_predict, test$yyes)
+summary(combined_prediction)
+
+str(combined_prediction)
+
+```
+
