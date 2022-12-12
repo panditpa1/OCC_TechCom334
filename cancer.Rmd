@@ -76,14 +76,7 @@ ANN_model <- neuralnet(diagnosisM ~ .,
 
 ANN_prediction <- predict(ANN_model, cancer_test)
 ANN_pred <- ifelse(ANN_prediction < 0.5, 0, 1)
-```
 
-```{r}
-length(ANN_pred)
-length(cancer_test$diagnosisM)
-```
-
-```{r}
 CrossTable(x = cancer_test$diagnosisM, y = ANN_pred, prop.chisq=FALSE)
 confusionMatrix(as.factor(ANN_pred), as.factor(cancer_test$diagnosisM), positive = "1")
 ```
@@ -92,8 +85,7 @@ confusionMatrix(as.factor(ANN_pred), as.factor(cancer_test$diagnosisM), positive
 ```{r}
 library(kernlab)
 cancer2 = cancer[sample(1:nrow(cancer)), ]
-#tele_train2 <- tele2[1:20594, ]
-#tele_test2 <- tele2[20595:41188, ]
+
 cancer_classifier <- ksvm(as.factor(diagnosisM) ~ ., data = cancer_train, kernel = "vanilladot")
 cancer_classifier
 # predictions on testing dataset
@@ -155,10 +147,36 @@ CrossTable(cancer_test$diagnosisM, dt_predict,
 confusionMatrix(as.factor(dt_predict), as.factor(cancer_test$diagnosisM), positive = "1")
 
 ```
+
+```{r}
+## Random Forests ----
+# random forest with default settings
+library(randomForest)
+set.seed(300)
+rf <- randomForest(diagnosis ~ ., data = cancer)
+rf
+
+library(caret)
+ctrl <- trainControl(method = "repeatedcv",
+                     number = 4, repeats = 4)
+
+# auto-tune a random forest
+grid_rf <- expand.grid(.mtry = c(2, 4, 8, 16))
+
+set.seed(300)
+m_rf <- train(diagnosis ~ ., data = cancer, method = "rf",
+              metric = "Kappa", trControl = ctrl,
+              tuneGrid = grid_rf)
+m_rf
+
+RF_pred <- predict(m_rf, cancer)
+```
+
+
 ## Combined Model
 ```{r}
 
-combined_prediction <- data.frame(log_cancer_M, KNN_test_pred, ANN_pred, svm_predictions, dt_predict, cancer_test$diagnosisM)
+combined_prediction <- data.frame(log_cancer_M, KNN_test_pred, ANN_pred, svm_predictions, dt_predict, RF_pred, cancer_test$diagnosisM)
 summary(combined_prediction)
 
 str(combined_prediction)
@@ -190,4 +208,4 @@ CrossTable(cancer_testComb2$cancer_test.diagnosisM, dt_predict2,
 confusionMatrix(as.factor(dt_predict2), as.factor(cancer_testComb2$cancer_test.diagnosisM), positive = "1")
 ```
 ## MadGen Implications
-Our stacked model gives a accuracy of __% and a false negative of blank%. Thus, this meets the expectations that MadGen 
+Our stacked model gives a accuracy of 91% and a false negative of 4.1%. This meets the expectations that MadGen stipulated for this project.
