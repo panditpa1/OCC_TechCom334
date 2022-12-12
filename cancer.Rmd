@@ -155,13 +155,39 @@ CrossTable(cancer_test$diagnosisM, dt_predict,
 confusionMatrix(as.factor(dt_predict), as.factor(cancer_test$diagnosisM), positive = "1")
 
 ```
-
+## Combined Model
 ```{r}
 
-combined_prediction <- data.frame(log_tele_yyes, KNN_test_pred, tele_pred, tele2_predictions, dt_predict, test$yyes)
+combined_prediction <- data.frame(log_cancer_M, KNN_test_pred, ANN_pred, svm_predictions, dt_predict, cancer_test$diagnosisM)
 summary(combined_prediction)
 
 str(combined_prediction)
 
 ```
 
+```{r}
+library(kernlab)
+
+cancerCombined = combined_prediction[sample(1:nrow(combined_prediction)), ]
+
+cancer_trainComb2 <- cancerCombined[1:398, ]
+cancer_testComb2  <- cancerCombined[399:569, ]
+
+```
+
+```{r}
+prop.table(table(cancer_trainComb2$cancer_test.diagnosisM))
+prop.table(table(cancer_testComb2$cancer_test.diagnosisM))
+
+cancer_dtmodel2 <- C5.0(as.factor(cancer_test.diagnosisM) ~ ., data = cancer_trainComb2)
+dt_predict2 <- predict(cancer_dtmodel2, cancer_testComb2)
+plot(cancer_dtmodel2, subtree = 1)
+length(dt_predict2)
+
+CrossTable(cancer_testComb2$cancer_test.diagnosisM, dt_predict2,
+           prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE,
+           dnn = c('actual', 'predicted'))
+confusionMatrix(as.factor(dt_predict2), as.factor(cancer_testComb2$cancer_test.diagnosisM), positive = "1")
+```
+## MadGen Implications
+Our stacked model gives a accuracy of __% and a false negative of blank%. Thus, this meets the expectations that MadGen 
